@@ -1,0 +1,62 @@
+\section{Experiments}
+\label{sec:experiments}
+For the full experiment, we generate quantum circuits using the two--qubit
+unitaries measured for each pair during simultaneous operation, rather than a
+standard gate for all pairs ...
+
+Finally, we benchmark qubit readout using standard dispersive measurement
+(\cite{wallraff2005approaching}). Measurement errors averaged over the $\ket{0}$
+and $\ket{1}$ states are shown in Table~\ref{tab:pauli_errors}. We have also
+measured the error when operating all qubits simultaneously, by randomly
+preparing each qubit in the $\ket{0}$ or $\ket{1}$ state and then measuring all
+qubits for the probability of the correct result. We find that simultaneous
+readout incurs only a modest increase in per--qubit measurement errors.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% The following paragraph contains several examples:
+%
+%   1.- A table. Use the environment \begin{table} ... \end{table} to insert
+%       a table.
+%
+%   2.- Centering in the page. Use the command \centering to center horizontally
+%        in the page
+%
+%   3.- Define and create the table. Use the environment \begin{tabular} ... 
+%       \end{tabular} to construct a table. The alignment of the cells is given by
+%       the character 'c' and the borders are defined by the character '|'.
+%
+%   4.- Horizontal line. Use the command \hline to create a horizontal line (border)
+%       for the table.
+%
+%   5.- Table columns and rows. Each column/cell is limited by the character '&" and
+%       the rows are limited by the character '\\'
+%
+%   6.- Change the font color. Use the command \textcolor{color}{text} to apply
+%       a given color to the specified text.
+%
+%   7.- Create a caption for the table. Use the command \caption{•} to include an 
+%       explanatory text of the table. Be as self-contained as possible.
+%
+%   8.- Definition of the label. Use the command \label{•} to be used/referenced in
+%       a different section of your research paper.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{table}[t]
+  \centering
+  \begin{tabular}{|c|| c | c |}
+    \hline
+    Average error & Isolated & Simultaneous \\
+    \hline
+    \hline
+    Single--qubit ($e_{1}$) & 0.15\% & 0.16\% \\
+    \textcolor{green}{Two--qubit ($e_{2}$)} & \textcolor{green}{0.36\%} & \textcolor{green}{0.62\%} \\
+    \textcolor{blue}{Two--qubit, cycle ($e_{2c}$)} & \textcolor{blue}{0.65\%} & \textcolor{blue}{0.93\%} \\
+    \textcolor{orange}{Readout ($e_{r}$)} & \textcolor{orange}{3.1\%} & \textcolor{orange}{3.8\%} \\
+    \hline
+  \end{tabular}
+  \caption{Average (mean) values of Pauli errors (black, green, blue) and
+           readout errors (orange), measured on qubits in isolation and when
+           operating all qubits simultaneously.}
+  \label{tab:pauli_errors}
+\end{table}

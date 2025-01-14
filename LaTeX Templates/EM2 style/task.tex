@@ -1,0 +1,38 @@
+\section{A suitable computational task}
+\label{sec:task}
+To demonstrate quantum supremacy, we compare our quantum processor against ...
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% This paragraph contains an example of math mode. This is an special and
+% powerful mode that allows you to easily create math formulas and scientific
+% environments. Use the special characters $ $ to enclose a math mode section.
+% If you need it for your research paper, let me know and I will help you out.
+%
+% It also contains an example of italic format. Use the command \textit{•} to
+% produce an italic format.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+For a given circuit, we collect the measured bitstrings $\{x_{i}\}$ and compute
+the \textit{linear cross--entropy benchmarking fidelity}, which is the mean of
+the simulated probabilities of the bitstrings we measured:
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% The following paragraph contains an example of an equation. Use the environments
+% \begin{equation} \begin{split} ... \end{split} \end{equation} to create a numered
+% multi-line equation. Each line is limited by the character '\\'. In order to align
+% the equation you can use the character '&'.
+%
+% The equation within a research paper are identified by a number. This is done
+% automatically by LaTeX. You have to define a \label{•} for future references.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+  \begin{split}
+    \mathcal{F}_{\text{XEB}} &= 2^{n} \braket{\Prob{x_{i}}}_{i} - 1, \\
+  \end{split}
+  \label{eq:fidelity}
+\end{equation}
+
+where $n$ is the number of ...

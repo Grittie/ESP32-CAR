@@ -1,0 +1,35 @@
+\documentclass[a4paper]{hva}
+
+\usepackage[hidelinks]{hyperref}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{braket}
+\usepackage{color}
+
+%\usepackage[backend=biber]{biblatex}
+%\addbibresource{biblio.bib}
+
+% Fill in this section with your personal data
+\title{TOY CAR}
+\course{Embedded Systems 2}
+\author{Student's name}
+
+% Begin the document 
+\begin{document}
+
+% Create the title
+\maketitle
+
+% All the chapters of the report
+\input{introduction}
+\input{task}
+\input{processor}
+\input{experiments}
+\input{conclusions}
+
+%\printbibliography
+\bibliography{biblio} 
+\bibliographystyle{ieeetr}
+
+\end{document}

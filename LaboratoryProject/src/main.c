@@ -13,20 +13,33 @@
 #define DIP_SWITCH_1 GPIO_NUM_39
 #define DIP_SWITCH_2 GPIO_NUM_40
 #define DIP_SWITCH_3 GPIO_NUM_41
+#define DIP_SWITCH_9 GPIO_NUM_38
+#define DIP_SWITCH_10 GPIO_NUM_20
 
 #define LED_1 GPIO_NUM_19
 #define LED_2 GPIO_NUM_47
+#define LED_3 GPIO_NUM_35
+#define LED_4 GPIO_NUM_37
 
 #define MOTOR_IN1 GPIO_NUM_5
 #define MOTOR_IN2 GPIO_NUM_6
 #define MOTOR_EN GPIO_NUM_4
 
-#define THRESHOLD_VALUE 600
+#define BREAK_BTN GPIO_NUM_15
+#define HORN_BTN GPIO_NUM_16
+
+#define BZR GPIO_NUM_17
+
+#define THRESHOLD_VALUE 50
 
 #define REVERSE_SPEED 800
 
 // Global Variables
 static adc_oneshot_unit_handle_t adc_handle;
+
+// ISR Variables
+volatile bool brake_pressed = false;  
+volatile bool horn_pressed = false;
 
 // Function Prototypes
 bool key_check(void);
@@ -34,9 +47,22 @@ int get_dip_switch_state(void);
 void configure_gpio(gpio_num_t pin, gpio_mode_t mode, bool pull_up, bool pull_down);
 void configure_pwm(void);
 int get_motor_speed(void);
+void indicator_light_task(void *param);
+static void IRAM_ATTR brake_button_isr_handler(void* arg);
+void configure_button_with_interrupt(gpio_num_t pin);
+static void IRAM_ATTR horn_button_isr_handler(void* arg);
+void configure_horn_button_with_interrupt(void);
+void configure_buzzer(void);
 
 void app_main(void)
 {
+    // Configure the button GPIO with interrupt
+    configure_button_with_interrupt(BREAK_BTN);
+
+    // Configure the horn button and buzzer
+    configure_horn_button_with_interrupt();
+    configure_buzzer();
+
     // Configure GPIOs for DIP switches, LEDs, and motor control
     configure_gpio(DIP_SWITCH_1, GPIO_MODE_INPUT, true, false);
     configure_gpio(DIP_SWITCH_2, GPIO_MODE_INPUT, true, false);
@@ -46,6 +72,14 @@ void app_main(void)
     configure_gpio(LED_2, GPIO_MODE_OUTPUT, false, false);
     configure_gpio(MOTOR_IN1, GPIO_MODE_OUTPUT, false, false);
     configure_gpio(MOTOR_IN2, GPIO_MODE_OUTPUT, false, false);
+
+    configure_gpio(DIP_SWITCH_9, GPIO_MODE_INPUT, true, false);
+    configure_gpio(DIP_SWITCH_10, GPIO_MODE_INPUT, true, false);
+    configure_gpio(LED_3, GPIO_MODE_OUTPUT, false, false);
+    configure_gpio(LED_4, GPIO_MODE_OUTPUT, false, false);
+
+    xTaskCreate(indicator_light_task, "Indicator Light Task", 2048, NULL, 1, NULL);
+
 
     // Initialize PWM for motor speed control
     configure_pwm();
@@ -71,6 +105,18 @@ void app_main(void)
     int last_state = -1;
 
     while (1) {
+        if (brake_pressed) {
+            // Stop the motor
+            printf("Brake pressed! Stopping the car.\n");
+            gpio_set_level(MOTOR_IN1, 0);
+            gpio_set_level(MOTOR_IN2, 0);
+            ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 0);
+            ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
+
+            // Reset the flag
+            brake_pressed = false;
+        }
+        
         if (key_check()) {
             printf("Key detected. Checking DIP switch state...\n");
 
@@ -229,4 +275,110 @@ int get_motor_speed(void)
     int raw_value = 0;
     adc_oneshot_read(adc_handle, POT_ADC_CHANNEL, &raw_value);
     return (raw_value * 1023) / 4095; // Map ADC value to 10-bit duty cycle
+}
+
+/**
+ * @brief Task to control the indicator lights based on the DIP switch states.
+ *
+ * This function checks the states of DIP_SWITCH_9 and DIP_SWITCH_10 and turns on the corresponding LEDs.
+ */
+void indicator_light_task(void *param) {
+    while (1) {
+        // Check DIP_SWITCH_10 and key presence
+        if (gpio_get_level(DIP_SWITCH_9) == 0 && key_check()) {
+            // Start blinking LED_3 until DIP_SWITCH_9 is turned off
+            while (gpio_get_level(DIP_SWITCH_9) == 0 && key_check()) {
+                gpio_set_level(LED_3, 1);
+                vTaskDelay(pdMS_TO_TICKS(500));
+                gpio_set_level(LED_3, 0);
+                vTaskDelay(pdMS_TO_TICKS(500));
+            }
+        } else {
+            gpio_set_level(LED_3, 0);
+        }
+
+        // Check DIP_SWITCH_10 and key presence
+        if (gpio_get_level(DIP_SWITCH_10) == 0  && key_check()) {
+            // Start blinking LED_4 until DIP_SWITCH_10 is turned off
+            while (gpio_get_level(DIP_SWITCH_10) == 0 && key_check()) {
+                gpio_set_level(LED_4, 1);
+                vTaskDelay(pdMS_TO_TICKS(500));
+                gpio_set_level(LED_4, 0);
+                vTaskDelay(pdMS_TO_TICKS(500));
+            }
+        } else {
+            gpio_set_level(LED_4, 0);
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(100));
+    }
+}
+
+
+
+/**
+ * @brief Interrupt handler for the brake button.
+ *
+ * This function is called when the brake button is pressed.
+ *
+ * @param arg The argument passed to the ISR handler.
+ */
+static void IRAM_ATTR brake_button_isr_handler(void* arg) {
+    brake_pressed = true;  // Set the flag when the button is pressed
+}
+
+/**
+ * @brief Configure a button with an interrupt handler.
+ *
+ * This function configures a button with an interrupt handler that triggers on a falling edge.
+ *
+ * @param pin The GPIO pin number to configure with an interrupt.
+ */
+void configure_button_with_interrupt(gpio_num_t pin) {
+    gpio_config_t io_conf = {
+        .pin_bit_mask = (1ULL << pin),       // Configure the specific pin
+        .mode = GPIO_MODE_INPUT,            // Set as input
+        .pull_up_en = GPIO_PULLUP_ENABLE,   // Enable pull-up resistor
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_NEGEDGE      // Trigger on falling edge
+    };
+    gpio_config(&io_conf);
+
+    // Install the ISR service and attach the handler
+    gpio_install_isr_service(0);
+    gpio_isr_handler_add(pin, brake_button_isr_handler, NULL);
+}
+
+// ISR for the horn button
+static void IRAM_ATTR horn_button_isr_handler(void* arg) {
+    horn_pressed = !horn_pressed;
+    gpio_set_level(BZR, horn_pressed ? 1 : 0);  // Turn buzzer ON/OFF
+}
+
+// Configure the horn button GPIO with interrupt
+void configure_horn_button_with_interrupt(void) {
+    gpio_config_t io_conf = {
+        .pin_bit_mask = (1ULL << HORN_BTN),
+        .mode = GPIO_MODE_INPUT,
+        .pull_up_en = GPIO_PULLUP_ENABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_NEGEDGE  // Trigger on button press (falling edge)
+    };
+    gpio_config(&io_conf);
+
+    // Install ISR service and attach handler
+    gpio_install_isr_service(0);  // Use default interrupt flags
+    gpio_isr_handler_add(HORN_BTN, horn_button_isr_handler, NULL);
+}
+
+// Configure the buzzer GPIO
+void configure_buzzer(void) {
+    gpio_config_t io_conf = {
+        .pin_bit_mask = (1ULL << BZR),
+        .mode = GPIO_MODE_OUTPUT,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE
+    };
+    gpio_config(&io_conf);
 }

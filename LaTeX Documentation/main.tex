@@ -1,135 +1,30 @@
-\documentclass[a4paper, 10pt]{article}
+\documentclass[a4paper]{hva}
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-% Packages
-%
-% Here you can declare the packages you are going to use in your research paper.
-% You can also setup the configuration for some of those packages.
-%
+\usepackage[hidelinks]{hyperref}
 \usepackage[utf8]{inputenc}
-\usepackage[english]{babel}
-\usepackage[style=apa,backend=biber]{biblatex}
-\usepackage{hyperref}
 \usepackage{graphicx}
-\usepackage{csquotes}
-\usepackage{amssymb}
 \usepackage{amsmath}
-\usepackage{xcolor}
 \usepackage{braket}
-\usepackage{a4wide}
-%\usepackage{multirow}            % Expands the content of a cell into multiple rows.
-%\usepackage{subcaption}          % Adds a separate \caption for each subfigure.
-%\usepackage{multicol}            % Expands the content of a cell into multiple columns.
+\usepackage{color}
 
-% Language declaration for the APA referencing style
-\DeclareLanguageMapping{english}{english-apa}
+%\usepackage[backend=biber]{biblatex}
+%\addbibresource{biblio.bib}
 
-% Color setup for the hyperlinks
-\hypersetup{
-  colorlinks,
-  linkcolor={red!90!black},
-  citecolor={green!90!black},
-  urlcolor={magenta!90!black}
-}
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Fill in this section with your data
+\title{TOY CAR}
+\course{Embedded Systems 2}
+\author{Lucas Hilgevoord}
 
+% Begin the document 
+\begin{document}
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-% Definitions
-%
-% Here I introduced some definitions for your research paper.
-%
-\addto{\captionsenglish}{\renewcommand{\abstractname}{Summary}}
-%
-% The following 4 definitions are required by the toy example.
-% You can remove/comment them when creating your own research paper.
-%
-\newcommand{\Prob}[1]{\mathbf{Pr}\left\{ #1 \right\}}
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-% Bibliography file
-%
-% This file must follow the bibtex reference format. See the toy example.
-%
-\bibliography{biblio}
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-\begin{document}          % Start of your research paper.
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-% Title page
-%
-% You have to modify this information adapting it to your own research paper. 
-%
-\title{Quantum Supremacy}
-\author{
-Student1's name, Student2's name \\
-Amsterdam University of Applied Science \\
-Amsterdam, The Netherlands \\
-\{student1.email, student2.email\}@hva.nl
-}
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\maketitle                % Creates the Title page for your research paper.
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-% Abstract
-%
-% Here you have to write down the Abstract/Summary/Samenvatting of your research paper.
-%
-\begin{abstract}
-The promise of quantum computers is that certain computational tasks might be
-executed exponentially faster on a ...
-\end{abstract}
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-%\clearpage                % Forces LaTeX to produce a page break.
-%\tableofcontents          % Creates the Table of Content for your research paper.
-%\clearpage                % Forces LaTeX to produce a page break.
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-% Sections of the paper
-%
-% Here you have to introduce every LaTeX file that is part of your research paper.
-% Use the \input{•} command to do so. Get used to define each differen section in a
-% separate .tex file; for instance, my research paper contains 6 sections therefore 
-% I have 6 different files.
-%
+% Create the title
+\maketitle
+% All the chapters of the report
 \input{introduction}
-\input{task}
-\input{processor}
+\input{assignment}
+\input{report}
 \input{experiments}
-\input{conclusions}
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{result}
 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-% Bibliography
-%
-% This command will print the references/bibliography at the end of your research paper.
-%
-\printbibliography[heading=bibintoc]
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-\end{document}          % End of your research paper.
+\end{document}

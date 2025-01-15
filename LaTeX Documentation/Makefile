@@ -1,7 +1,7 @@
-# Makefile for LaTeX files
+# Makefile for PowerDot presentations
 
-LATEX	= pdflatex
-BIBTEX	= biber
+LATEX	= latex
+BIBTEX	= bibtex
 MAKEINDEX = makeindex
 
 RERUN = "(There were undefined references|Rerun to get (cross-references|the bars) right)"
@@ -39,19 +39,21 @@ define run-latex
 	  egrep -i "(Reference|Citation).*undefined" $(<:%.tex=%.log) ; true
 endef
 
-$(TRG)	: %.pdf : %.tex $(DEP) $(PDFPICS) $(BIBFILE)
+$(TRG)	: %.pdf : %.tex $(DEP) $(BIBFILE) #$(PDFPICS)
 	  @$(run-latex)
+	  dvips $(TRG:%.pdf=%.dvi)
+	  ps2pdf $(TRG:%.pdf=%.ps)
 
 clean	:
-	  -rm -f $(TRG) $(PSF) $(PDF) $(TRG:%.pdf=%.aux) $(TRG:%.pdf=%.bbl) $(TRG:%.pdf=%.blg) $(TRG:%.pdf=%.log) $(TRG:%.pdf=%.out) $(TRG:%.pdf=%.bcf) $(TRG:%.pdf=%.toc) $(TRG:%.pdf=%.run.xml)
+	  -rm -f $(TRG) $(PSF) $(PDF) $(TRG:%.pdf=%.aux) $(TRG:%.pdf=%.bbl) $(TRG:%.pdf=%.blg) $(TRG:%.pdf=%.bm) $(TRG:%.pdf=%.dvi) $(TRG:%.pdf=%.log) $(TRG:%.pdf=%.out) $(TRG:%.pdf=%.ps) $(TRG:%.pdf=%.toc) $(TRG:%.pdf=%.vrb)
 
 .PHONY	: all show clean ps pdf showps
 
 view:
-	acroread $(PDF)
+	acroread $(TRG)
 
 osx:
-	open $(PDF)
+	open $(TRG)
 
 ######################################################################
 # Define rules for PDF source files.

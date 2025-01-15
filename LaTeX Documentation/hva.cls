@@ -22,9 +22,9 @@
 \pagestyle{fancy}
 \fancyhead{}
 \fancyfoot{}
-\lhead{\includegraphics[scale=1]{img/hva.ps}}
+\lhead{\includegraphics[scale=1]{img/hva.pdf}}
 \cfoot{\thepage}
-\rfoot{\includegraphics[scale=0.8]{img/footer.ps}}
+\rfoot{\includegraphics[scale=0.8]{img/footer.pdf}}
 
 \newtheorem{question}{Question}[section]
 \newtheorem{answer}{Answer}[section]
@@ -51,7 +51,7 @@
     \begin{center}
 
       \begin{figure}[h!]
-        \centerline{\psfig{file=img/hva.ps,scale=2.5}}
+        \centerline{\psfig{file=img/hva.pdf,scale=2.5}}
       \end{figure}
 
       \HRule

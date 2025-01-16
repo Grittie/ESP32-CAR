@@ -1,5 +1,8 @@
 {
     "files.associations": {
-        "adc_oneshot.h": "c"
+        "adc_oneshot.h": "c",
+        "font8x8_basic.h": "c",
+        "i2c.h": "c",
+        "gpio.h": "c"
     }
 }

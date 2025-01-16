@@ -7,9 +7,9 @@
 #include "esp_timer.h"
 
 // Pin Definitions
-#define LDR_ADC_CHANNEL ADC_CHANNEL_1 // GPIO2 -> ADC1_CHANNEL_1
+#define LDR_ADC_CHANNEL ADC_CHANNEL_1
 #define LDR_ADC_UNIT ADC_UNIT_1
-#define POT_ADC_CHANNEL ADC_CHANNEL_8 // Adjust to your potentiometer pin
+#define POT_ADC_CHANNEL ADC_CHANNEL_8
 
 #define DIP_SWITCH_1 GPIO_NUM_39
 #define DIP_SWITCH_2 GPIO_NUM_40

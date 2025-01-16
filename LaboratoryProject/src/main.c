@@ -4,6 +4,7 @@
 #include "driver/gpio.h"
 #include "driver/ledc.h"
 #include "esp_adc/adc_oneshot.h"
+#include "esp_timer.h"
 
 // Pin Definitions
 #define LDR_ADC_CHANNEL ADC_CHANNEL_1 // GPIO2 -> ADC1_CHANNEL_1
@@ -34,12 +35,20 @@
 
 #define REVERSE_SPEED 800
 
+#define HALL_SENSOR_PIN GPIO_NUM_7
+#define PULSE_COUNT_PERIOD_MS 1000
+
 // Global Variables
 static adc_oneshot_unit_handle_t adc_handle;
 
 // ISR Variables
 volatile bool brake_pressed = false;  
 volatile bool horn_pressed = false;
+
+// Hall Sensor Variables
+volatile int pulse_count = 0;
+volatile bool is_motor_active = false;
+
 
 // Function Prototypes
 bool key_check(void);
@@ -55,6 +64,9 @@ void configure_horn_button_with_interrupt(void);
 void configure_buzzer(void);
 void handle_brake(void);
 void handle_horn(void);
+static void IRAM_ATTR hall_sensor_isr_handler(void* arg);
+void calculate_rpm_task(void* param);
+void configure_hall_sensor(void);
 
 void app_main(void)
 {
@@ -106,10 +118,14 @@ void app_main(void)
 
     int last_state = -1;
 
+    configure_hall_sensor();
+    xTaskCreate(calculate_rpm_task, "Calculate RPM Task", 2048, NULL, 1, NULL);
+
     while (1) {
 
         if (brake_pressed) {
             handle_brake();
+            is_motor_active = false;
         }
 
         if (horn_pressed) {
@@ -126,6 +142,7 @@ void app_main(void)
 
                 if (current_state == 1) {
                     printf("Car is in park\n");
+
                     // Blink both LEDs for 10 cycles rapidly
                     for (int i = 0; i < 10; i++) {
                         gpio_set_level(LED_1, 1);
@@ -137,6 +154,7 @@ void app_main(void)
                     }
                 } else if (current_state == 2) {
                     printf("Car is in drive\n");
+                    is_motor_active = true;
 
                     // Set motor direction (forwards) and speed based on DIP switch 2
                     gpio_set_level(MOTOR_IN1, 1);
@@ -148,6 +166,7 @@ void app_main(void)
 
                         if (brake_pressed) {
                             handle_brake();
+                            is_motor_active = false;
                             break;
                         }
 
@@ -163,6 +182,7 @@ void app_main(void)
                     }
                 } else if (current_state == 3) {
                     printf("Car is in reverse\n");
+                    is_motor_active = true;
 
                     // Set motor direction (backwards) and speed based on DIP switch 3
                     gpio_set_level(MOTOR_IN1, 0);
@@ -173,6 +193,7 @@ void app_main(void)
                     ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
                 } else {
                     printf("Car is off\n");
+                    is_motor_active = false;
 
                     // Turn off motor and LEDs when car is off
                     gpio_set_level(MOTOR_IN1, 0);
@@ -421,4 +442,59 @@ void handle_horn() {
     vTaskDelay(pdMS_TO_TICKS(1000));  // Wait for 1 second
     gpio_set_level(BZR, 0);  // Turn off the buzzer
     horn_pressed = false;  // Reset the flag
+}
+
+/**
+ * @brief Interrupt handler for the Hall Effect Sensor.
+ *
+ * This function is called when the Hall Effect Sensor detects a pulse.
+ *
+ * @param arg The argument passed to the ISR handler.
+ */
+static void IRAM_ATTR hall_sensor_isr_handler(void* arg) {
+    pulse_count++;
+}
+
+/**
+ * @brief Task to calculate the motor speed using the Hall Effect Sensor.
+ *
+ * This function calculates the motor speed in RPM using the Hall Effect Sensor.
+ */
+void calculate_rpm_task(void* param) {
+    while (1) {
+        if (is_motor_active) {
+            int pulses;
+            uint32_t start_time = esp_timer_get_time();
+            vTaskDelay(pdMS_TO_TICKS(PULSE_COUNT_PERIOD_MS));
+            uint32_t end_time = esp_timer_get_time();
+
+            pulses = pulse_count;
+            pulse_count = 0;
+
+            double time_seconds = (end_time - start_time) / 1e6;  // Convert time to seconds
+            double rpm = (pulses / time_seconds) * 60;           // Calculate RPM
+            printf("Motor Speed: %.2f RPM\n", rpm);
+        } else {
+            vTaskDelay(pdMS_TO_TICKS(500)); // Sleep to save CPU cycles if the motor is inactive
+        }
+    }
+}
+
+/**
+ * @brief Configure the Hall Effect Sensor GPIO pin.
+ *
+ * This function configures the Hall Effect Sensor GPIO pin as an input with a pull-up resistor.
+ */
+void configure_hall_sensor() {
+    gpio_config_t io_conf = {
+        .pin_bit_mask = (1ULL << HALL_SENSOR_PIN),
+        .mode = GPIO_MODE_INPUT,
+        .pull_up_en = GPIO_PULLUP_ENABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_POSEDGE
+    };
+    gpio_config(&io_conf);
+
+    gpio_install_isr_service(0);
+    gpio_isr_handler_add(HALL_SENSOR_PIN, hall_sensor_isr_handler, NULL);
 }

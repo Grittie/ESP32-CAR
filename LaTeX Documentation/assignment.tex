@@ -1,0 +1,22 @@
+\section{Assignments}
+\label{sec:assignments}
+\begin{enumerate}
+    \item You will use the light–dependent resistor (LDR), seen in Figure 3 (a), to simulate the ignition key of the car. You have to define a threshold indicating the level of light deciding whether the key is present or absent. As expected, the car only works when the key is present; otherwise, the car is OFF.
+    \item You will use a section on the DIP switch (DIP), seen in Figure 3 (b), to simulate the gearbox of your car. The car can be in 4 possible states:
+    \begin{itemize}
+        \item OFF: The car is OFF and nothing is working.
+        \item PARK: The car is going to park. You must use 2 LEDs, seen in Figure 3 (f), that will blink (at your desired frequency) for 10 times and then they will go OFF.
+        \item DRIVE: The car is moving forward. The motor (MOT), seen in Figure 3 (c), rotates clockwise at a certain speed, given by the potentiometer (POT), seen in Figure 3 (d). The more you increase POT, the higher the speed. Use the motor driver (DRV), seen in Figure 3 (j), to set the direction of the rotation.
+        \item BACK: The motor (MOT) rotates counterclockwise at a single predefined speed. Use the motor driver (DRV) to set the direction of the rotation.
+    \end{itemize}
+    \item You will use the screen (DSP), seen in Figure 3 (e), to show some important information of the car, for example: \textit{the state of the gearbox (DIP)}, the frequency and the speed of the motor rotation, additional state of the LEDs, or any other information that you may consider important.
+    \item You will use another section on the DIP switch (DIP), seen in Figure 3 (b), to simulate the controls of the directional lights. The lights can be in three different options:
+    \begin{itemize}
+        \item LEFT: The car is turning to the left. You should blink (at your desired frequency) the corresponding directional LED.
+        \item RIGHT: The car is turning to the right. You should blink (at your desired frequency) the corresponding directional LED.
+        \item NONE: The car is not turning. You should not blink any directional LED.
+    \end{itemize}
+    \item You will use a push button (BTN), seen in Figure 3 (i), to simulate the brake pedal. When the pedal is pressed, the car will stop. You have to use an interrupt to simulate this process.
+    \item You will use another push button (BTN) to activate/deactivate the horn of the car. You will use a buzzer (BZR), seen in Figure 3 (h), as the car horn. You have to use an interrupt to simulate this process.
+    \item The frequency and speed of the motor rotation can be estimated using the Hall effect sensor, seen in Figure 3 (g). You have to assemble the magnet holder, seen in Figure 3 (l), into the motor shaft, and then attach the cube magnet, seen in Figure 3 (k), into the holder. Figure 2 shows an example of the mounting schema.
+\end{enumerate}

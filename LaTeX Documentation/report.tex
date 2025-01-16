@@ -1,0 +1,64 @@
+\section{Report}
+\label{sec:report}
+
+\subsection{Project Setup}
+I started by setting up the project through PlatformIO. This is a plugin for Visual Studio Code that allows you to work with the ESP32. \\
+I created a new project and kept the following file structure:
+\begin{verbatim}
+Project
+├── src
+│   ├── CMakeLists.txt
+│   ├── main.c
+├── include
+│   ├── README.md
+│   ├── pin_config.h
+│   ├── utilities.h
+├── README.md
+├── platformio.ini
+└── .gitignore
+\end{verbatim}
+
+\subsection{Component List}
+The assignment was to simulate a car. To do this, we needed several components:
+\begin{itemize}
+    \item ESP32-S3-Wroom-1
+    \item A light–dependent resistor (LDR)
+    \item A DIP switch (DIP)
+    \item A DC motor (MOT)
+    \item An L293D motor driver (DRV)
+    \item A potentiometer (POT)
+    \item An I2C SSD1306 OLED display (DSP)
+    \item A Hall effect sensor (HAL)
+    \item A cube magnet (MGN)
+    \item A buzzer (BZR)
+    \item Auxiliary LEDs (LED)
+    \item Auxiliary push buttons (BTN)
+\end{itemize}
+
+\subsection{Program}
+The program is written in C and is divided into 3 files:
+\begin{itemize}
+    \item {\textbf{main.c}}, \textit{which contains the main loop}
+    \item {\textbf{pin\_config.h}}, \textit{which contains the pin configuration}
+    \item {\textbf{utilities.h}}, \textit{which contains the utility functions and libraries}
+\end{itemize} 
+\\
+To get started on the car, I had to figure out a way to make the different states of the car work. To do this I created some sort of state machine. I tried working with structs but I was not able to get it to work and it felt a bit too over engineered at some point.
+
+\subsubsection{Core Loop}
+\begin{enumerate}
+    \item The car is in the OFF state, which is the default state where the car checks for the presence of the key.
+    \item If the key is present, the car starts up, and the DIP switch is examined to determine the gearbox simulation. This switch determines the state of the car.
+    \item There are four states the car can be in: OFF, PARK, DRIVE, and BACK.
+    \begin{enumerate}
+        \item If the car is in the PARK state, the LEDs will flash, and it will wait until the car transitions to another state.
+        \item In the DRIVE state, the engine is activated, and the speed is controlled by the potentiometer. The engine rotates clockwise in this state.
+        \item In the BACK state, the engine is activated, and it rotates counterclockwise.
+        \item If the car is in the OFF state, the engine is turned off, and the key must be reinserted.
+        \item If the gearbox is not in any of these states, it is in the NEUTRAL state, and nothing happens.
+    \end{enumerate}
+    \item The car can activate its turn signals by using the appropriate DIP switch. When the left DIP switch is on, the left LEDs will flash, and when the right DIP switch is on, the right LEDs will flash. If both are on, both LEDs will flash.
+    \item The car can honk the horn by pressing the horn button. This is an interrupt that triggers the horn.
+    \item The car can brake by pressing the brake button. This is an interrupt that shuts off the engine.
+    \item The car can display information about its state, speed, horn usage, and turn signals on the OLED screen.
+\end{enumerate}

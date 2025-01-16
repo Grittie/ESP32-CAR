@@ -3,11 +3,19 @@
 #include "freertos/task.h"
 #include "driver/gpio.h"
 #include "driver/ledc.h"
+#include "driver/adc.h"
 #include "esp_adc/adc_oneshot.h"
 #include "esp_timer.h"
+#ifdef __cplusplus
+#include <Arduino.h>
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#endif
+
 
 // Pin Definitions
-#define LDR_ADC_CHANNEL ADC_CHANNEL_1
+#define LDR_ADC_C HANNEL ADC_CHANNEL_1
 #define LDR_ADC_UNIT ADC_UNIT_1
 #define POT_ADC_CHANNEL ADC_CHANNEL_8
 
@@ -38,17 +46,22 @@
 #define HALL_SENSOR_PIN GPIO_NUM_7
 #define PULSE_COUNT_PERIOD_MS 1000
 
+// OLED Display Settings
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+#define OLED_RESET -1
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
 // Global Variables
 static adc_oneshot_unit_handle_t adc_handle;
 
 // ISR Variables
-volatile bool brake_pressed = false;  
+volatile bool brake_pressed = false;
 volatile bool horn_pressed = false;
 
 // Hall Sensor Variables
 volatile int pulse_count = 0;
 volatile bool is_motor_active = false;
-
 
 // Function Prototypes
 bool key_check(void);
@@ -57,19 +70,37 @@ void configure_gpio(gpio_num_t pin, gpio_mode_t mode, bool pull_up, bool pull_do
 void configure_pwm(void);
 int get_motor_speed(void);
 void indicator_light_task(void *param);
-static void IRAM_ATTR brake_button_isr_handler(void* arg);
+static void IRAM_ATTR brake_button_isr_handler(void *arg);
 void configure_button_with_interrupt(gpio_num_t pin);
-static void IRAM_ATTR horn_button_isr_handler(void* arg);
+static void IRAM_ATTR horn_button_isr_handler(void *arg);
 void configure_horn_button_with_interrupt(void);
 void configure_buzzer(void);
 void handle_brake(void);
 void handle_horn(void);
-static void IRAM_ATTR hall_sensor_isr_handler(void* arg);
-void calculate_rpm_task(void* param);
+static void IRAM_ATTR hall_sensor_isr_handler(void *arg);
+void calculate_rpm_task(void *param);
 void configure_hall_sensor(void);
 
-void app_main(void)
-{
+extern "C" void app_main(void) {
+    // Initialize Arduino framework
+    initArduino();
+
+    // Initialize OLED Display
+    if (!display.begin(SSD1306_I2C_ADDRESS, GPIO_NUM_21, GPIO_NUM_22)) {
+        printf("Failed to initialize SSD1306 OLED display!\n");
+        return;
+    }
+
+    // Clear and display "ESP32 Car" message
+    display.clearDisplay();
+    display.setTextSize(2);
+    display.setTextColor(SSD1306_WHITE);
+    display.setCursor(0, 0);
+    display.println("ESP32 Car");
+    display.display();
+
+    vTaskDelay(pdMS_TO_TICKS(2000)); // Display message for 2 seconds
+
     // Configure the button GPIO with interrupt
     configure_button_with_interrupt(BREAK_BTN);
 
@@ -93,7 +124,6 @@ void app_main(void)
     configure_gpio(LED_4, GPIO_MODE_OUTPUT, false, false);
 
     xTaskCreate(indicator_light_task, "Indicator Light Task", 2048, NULL, 1, NULL);
-
 
     // Initialize PWM for motor speed control
     configure_pwm();
@@ -122,7 +152,6 @@ void app_main(void)
     xTaskCreate(calculate_rpm_task, "Calculate RPM Task", 2048, NULL, 1, NULL);
 
     while (1) {
-
         if (brake_pressed) {
             handle_brake();
             is_motor_active = false;
@@ -143,7 +172,6 @@ void app_main(void)
                 if (current_state == 1) {
                     printf("Car is in park\n");
 
-                    // Blink both LEDs for 10 cycles rapidly
                     for (int i = 0; i < 10; i++) {
                         gpio_set_level(LED_1, 1);
                         gpio_set_level(LED_2, 1);
@@ -156,11 +184,9 @@ void app_main(void)
                     printf("Car is in drive\n");
                     is_motor_active = true;
 
-                    // Set motor direction (forwards) and speed based on DIP switch 2
                     gpio_set_level(MOTOR_IN1, 1);
                     gpio_set_level(MOTOR_IN2, 0);
-                    
-                    // Dynamic motor speed control based on potentiometer value
+
                     while (current_state == 2) {
                         current_state = get_dip_switch_state();
 
@@ -184,18 +210,15 @@ void app_main(void)
                     printf("Car is in reverse\n");
                     is_motor_active = true;
 
-                    // Set motor direction (backwards) and speed based on DIP switch 3
                     gpio_set_level(MOTOR_IN1, 0);
                     gpio_set_level(MOTOR_IN2, 1);
 
-                    // Set motor speed to a predefined value
                     ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, REVERSE_SPEED);
                     ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
                 } else {
                     printf("Car is off\n");
                     is_motor_active = false;
 
-                    // Turn off motor and LEDs when car is off
                     gpio_set_level(MOTOR_IN1, 0);
                     gpio_set_level(MOTOR_IN2, 0);
                     ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 0);

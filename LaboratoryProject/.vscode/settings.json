@@ -1,5 +1,6 @@
 {
     "files.associations": {
-        "adc_oneshot.h": "c"
+        "adc_oneshot.h": "c",
+        "freertos.h": "c"
     }
 }

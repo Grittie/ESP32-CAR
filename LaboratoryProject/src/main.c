@@ -53,6 +53,8 @@ void configure_button_with_interrupt(gpio_num_t pin);
 static void IRAM_ATTR horn_button_isr_handler(void* arg);
 void configure_horn_button_with_interrupt(void);
 void configure_buzzer(void);
+void handle_brake(void);
+void handle_horn(void);
 
 void app_main(void)
 {
@@ -105,18 +107,15 @@ void app_main(void)
     int last_state = -1;
 
     while (1) {
-        if (brake_pressed) {
-            // Stop the motor
-            printf("Brake pressed! Stopping the car.\n");
-            gpio_set_level(MOTOR_IN1, 0);
-            gpio_set_level(MOTOR_IN2, 0);
-            ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 0);
-            ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
 
-            // Reset the flag
-            brake_pressed = false;
+        if (brake_pressed) {
+            handle_brake();
         }
-        
+
+        if (horn_pressed) {
+            handle_horn();
+        }
+
         if (key_check()) {
             printf("Key detected. Checking DIP switch state...\n");
 
@@ -146,6 +145,16 @@ void app_main(void)
                     // Dynamic motor speed control based on potentiometer value
                     while (current_state == 2) {
                         current_state = get_dip_switch_state();
+
+                        if (brake_pressed) {
+                            handle_brake();
+                            break;
+                        }
+
+                        if (horn_pressed) {
+                            handle_horn();
+                        }
+
                         int speed = get_motor_speed();
                         printf("Dynamic motor speed: %d\n", speed);
                         ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, speed);
@@ -314,8 +323,6 @@ void indicator_light_task(void *param) {
     }
 }
 
-
-
 /**
  * @brief Interrupt handler for the brake button.
  *
@@ -349,13 +356,15 @@ void configure_button_with_interrupt(gpio_num_t pin) {
     gpio_isr_handler_add(pin, brake_button_isr_handler, NULL);
 }
 
-// ISR for the horn button
 static void IRAM_ATTR horn_button_isr_handler(void* arg) {
-    horn_pressed = !horn_pressed;
-    gpio_set_level(BZR, horn_pressed ? 1 : 0);  // Turn buzzer ON/OFF
+    horn_pressed = true; // Set the flag
 }
 
-// Configure the horn button GPIO with interrupt
+/**
+ * @brief Configure the horn button with an interrupt handler.
+ *
+ * This function configures the horn button with an interrupt handler that triggers on a falling edge.
+ */
 void configure_horn_button_with_interrupt(void) {
     gpio_config_t io_conf = {
         .pin_bit_mask = (1ULL << HORN_BTN),
@@ -371,14 +380,45 @@ void configure_horn_button_with_interrupt(void) {
     gpio_isr_handler_add(HORN_BTN, horn_button_isr_handler, NULL);
 }
 
-// Configure the buzzer GPIO
+/**
+ * @brief Configure the buzzer GPIO pin.
+ *
+ * This function configures the buzzer GPIO pin as an output with a pull-up resistor.
+ */
 void configure_buzzer(void) {
     gpio_config_t io_conf = {
         .pin_bit_mask = (1ULL << BZR),
         .mode = GPIO_MODE_OUTPUT,
-        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_up_en = GPIO_PULLUP_ENABLE,
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
         .intr_type = GPIO_INTR_DISABLE
     };
     gpio_config(&io_conf);
+}
+
+/**
+ * @brief Handle the brake button press event.
+ *
+ * This function is called when the brake button is pressed.
+ */
+void handle_brake() {
+    printf("Brake pressed! Stopping the car.\n");
+    gpio_set_level(MOTOR_IN1, 0);
+    gpio_set_level(MOTOR_IN2, 0);
+    ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 0);
+    ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
+    brake_pressed = false;  // Reset the flag
+}
+
+/**
+ * @brief Handle the horn button press event.
+ *
+ * This function is called when the horn button is pressed.
+ */
+void handle_horn() {
+    printf("Horn pressed! Beeping.\n");
+    gpio_set_level(BZR, 1);  // Turn on the buzzer
+    vTaskDelay(pdMS_TO_TICKS(1000));  // Wait for 1 second
+    gpio_set_level(BZR, 0);  // Turn off the buzzer
+    horn_pressed = false;  // Reset the flag
 }

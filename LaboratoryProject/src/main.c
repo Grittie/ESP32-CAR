@@ -8,34 +8,44 @@
 #include "driver/i2c.h"
 
 // Pin Definitions
+
+// ADC Definitions
 #define LDR_ADC_CHANNEL ADC_CHANNEL_1
 #define LDR_ADC_UNIT ADC_UNIT_1
 #define POT_ADC_CHANNEL ADC_CHANNEL_9
 
+// PWM Definitions
 #define DIP_SWITCH_1 GPIO_NUM_39
 #define DIP_SWITCH_2 GPIO_NUM_40
 #define DIP_SWITCH_3 GPIO_NUM_41
 #define DIP_SWITCH_9 GPIO_NUM_38
 #define DIP_SWITCH_10 GPIO_NUM_20
 
+// LED Definitions
 #define LED_1 GPIO_NUM_19
 #define LED_2 GPIO_NUM_47
 #define LED_3 GPIO_NUM_35
 #define LED_4 GPIO_NUM_37
 
+// Motor Definitions
 #define MOTOR_IN1 GPIO_NUM_5
 #define MOTOR_IN2 GPIO_NUM_6
 #define MOTOR_EN GPIO_NUM_4
 
+// Button Definitions
 #define BREAK_BTN GPIO_NUM_15
 #define HORN_BTN GPIO_NUM_16
 
+// Buzzer Definitions
 #define BZR GPIO_NUM_17
 
+// LDR Threshhold Value
 #define THRESHOLD_VALUE 50
 
+// Motor Speed Definitions
 #define REVERSE_SPEED 800
 
+// Hall Effect Sensor Definitions
 #define HALL_SENSOR_PIN GPIO_NUM_7
 #define PULSE_COUNT_PERIOD_MS 1000
 
@@ -54,7 +64,12 @@
 #define OLED_CMD_DISPLAY_ON 0xAF
 #define OLED_CMD_DISPLAY_OFF 0xAE
 
+// Button Debounce Delay
+#define DEBOUNCE_DELAY_MS 50
+
 // Global Variables
+
+// ADC Handle
 static adc_oneshot_unit_handle_t adc_handle;
 
 // ISR Variables
@@ -64,6 +79,10 @@ volatile bool horn_pressed = false;
 // Hall Sensor Variables
 volatile int pulse_count = 0;
 volatile bool is_motor_active = false;
+
+// Global variables for debouncing
+volatile uint32_t last_brake_press_time = 0;
+volatile uint32_t last_horn_press_time = 0;
 
 
 // Function Prototypes
@@ -114,6 +133,7 @@ void app_main(void)
     configure_gpio(LED_3, GPIO_MODE_OUTPUT, false, false);
     configure_gpio(LED_4, GPIO_MODE_OUTPUT, false, false);
 
+    // Create a task to control the indicator lights
     xTaskCreate(indicator_light_task, "Indicator Light Task", 2048, NULL, 1, NULL);
 
 
@@ -140,15 +160,17 @@ void app_main(void)
 
     int last_state = -1;
 
+    // Configure Hall Effect Sensor and create task to calculate RPM
     configure_hall_sensor();
     xTaskCreate(calculate_rpm_task, "Calculate RPM Task", 2048, NULL, 1, NULL);
 
-
+    // Initialize I2C master interface and OLED display
     i2c_master_init();
     oled_init();
     oled_clear();
     oled_write_text("ESP32 CAR");
 
+    // Main loop to check the key presence and DIP switch states
     while (1) {
 
         if (brake_pressed) {
@@ -164,7 +186,6 @@ void app_main(void)
             printf("Key detected. Checking DIP switch state...\n");
             display_car_state("Key Detected");
             
-
             int current_state = get_dip_switch_state();
             if (current_state != last_state) {
                 last_state = current_state;
@@ -386,7 +407,11 @@ void indicator_light_task(void *param) {
  * @param arg The argument passed to the ISR handler.
  */
 static void IRAM_ATTR brake_button_isr_handler(void* arg) {
-    brake_pressed = true;  // Set the flag when the button is pressed
+    uint32_t current_time = esp_timer_get_time() / 1000;  // Get time in milliseconds
+    if (current_time - last_brake_press_time > DEBOUNCE_DELAY_MS) {
+        brake_pressed = true;  // Set the flag when the button is pressed
+        last_brake_press_time = current_time;  // Update last press time
+    }
 }
 
 /**
@@ -412,7 +437,11 @@ void configure_button_with_interrupt(gpio_num_t pin) {
 }
 
 static void IRAM_ATTR horn_button_isr_handler(void* arg) {
-    horn_pressed = true; // Set the flag
+    uint32_t current_time = esp_timer_get_time() / 1000;  // Get time in milliseconds
+    if (current_time - last_horn_press_time > DEBOUNCE_DELAY_MS) {
+        horn_pressed = true;  // Set the flag
+        last_horn_press_time = current_time;  // Update last press time
+    }
 }
 
 /**

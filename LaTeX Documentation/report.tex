@@ -2,24 +2,36 @@
 \label{sec:report}
 
 \subsection{Project Setup}
-I started by setting up the project through PlatformIO. This is a plugin for Visual Studio Code that allows you to work with the ESP32. \\
-I created a new project and kept the following file structure:
+To start this project I made sure to setup a proper project structure. This is the structure I used:
 \begin{verbatim}
-Project
-├── src
-│   ├── CMakeLists.txt
-│   ├── main.c
-├── include
-│   ├── README.md
-│   ├── pin_config.h
-│   ├── utilities.h
-├── README.md
-├── platformio.ini
-└── .gitignore
+    ├── LaboratoryProject/       # PlatformIO project containing the ESP32 firmware
+    │   ├── src/                 # Source code for the project
+    │   ├── include/             # Header files
+    │   ├── lib/                 # Libraries used in the project
+    │   ├── test/                # Unit tests for the project
+    │   └── platformio.ini       # PlatformIO configuration file
+    ├── Latex Documentation/     # LaTeX files for the project report
+    │   ├── main.tex             # Main LaTeX file
+    │   └── figures/             # Figures and diagrams used in the documentation
+    ├── docs/                    # Project documentation in Markdown format
+    │   ├── index.md             # Main documentation file
+    │   ├── assets/              # Media assets for documentation
+    │   │   ├── schematics/      # Circuit diagrams and schematics
+    │   │   ├── design/          # CAD files and design-related visuals
+    │   │   └── images/          # General images and screenshots
+    ├── .gitignore               # Git ignore file
+    └── README.md                # This file
 \end{verbatim}
+This structure was used to keep the project organized and to make it easier to navigate through the different parts of the project. 
+The PlatformIO project contains the firmware for the ESP32, the LaTeX documentation contains the report, and the docs folder contains the project documentation in Markdown format.
+
+PlatformIO is a cross-platform, cross-architecture, multiple framework, professional tool for embedded systems engineers and for software developers who write applications for embedded products. 
+It is a powerful, open-source, and multi-platform IDE for IoT development. 
+
+\newpage
 
 \subsection{Component List}
-The assignment was to simulate a car. To do this, we needed several components:
+The assignment was to use common components to create a toy car. The components used in this project are:
 \begin{itemize}
     \item ESP32-S3-Wroom-1
     \item A light–dependent resistor (LDR)
@@ -36,29 +48,39 @@ The assignment was to simulate a car. To do this, we needed several components:
 \end{itemize}
 
 \subsection{Program}
-The program is written in C and is divided into 3 files:
-\begin{itemize}
-    \item {\textbf{main.c}}, \textit{which contains the main loop}
-    \item {\textbf{pin\_config.h}}, \textit{which contains the pin configuration}
-    \item {\textbf{utilities.h}}, \textit{which contains the utility functions and libraries}
-\end{itemize} 
-\\
-To get started on the car, I had to figure out a way to make the different states of the car work. To do this I created some sort of state machine. I tried working with structs but I was not able to get it to work and it felt a bit too over engineered at some point.
+The program is written in C with espidf and platformIO.
 
-\subsubsection{Core Loop}
-\begin{enumerate}
-    \item The car is in the OFF state, which is the default state where the car checks for the presence of the key.
-    \item If the key is present, the car starts up, and the DIP switch is examined to determine the gearbox simulation. This switch determines the state of the car.
-    \item There are four states the car can be in: OFF, PARK, DRIVE, and BACK.
-    \begin{enumerate}
-        \item If the car is in the PARK state, the LEDs will flash, and it will wait until the car transitions to another state.
-        \item In the DRIVE state, the engine is activated, and the speed is controlled by the potentiometer. The engine rotates clockwise in this state.
-        \item In the BACK state, the engine is activated, and it rotates counterclockwise.
-        \item If the car is in the OFF state, the engine is turned off, and the key must be reinserted.
-        \item If the gearbox is not in any of these states, it is in the NEUTRAL state, and nothing happens.
-    \end{enumerate}
-    \item The car can activate its turn signals by using the appropriate DIP switch. When the left DIP switch is on, the left LEDs will flash, and when the right DIP switch is on, the right LEDs will flash. If both are on, both LEDs will flash.
-    \item The car can honk the horn by pressing the horn button. This is an interrupt that triggers the horn.
-    \item The car can brake by pressing the brake button. This is an interrupt that shuts off the engine.
-    \item The car can display information about its state, speed, horn usage, and turn signals on the OLED screen.
-\end{enumerate}
+\subsection{Program Setup}
+The program is designed to handle various components of the toy car, each of which is controlled by a specific function. The setup begins with an LDR-based ignition system, followed by the DIP switch for gear control, motor controls, indicator lights, brake and horn buttons, Hall effect sensor for RPM measurement, and an OLED display to show the car's status.
+
+\subsubsection{LDR Ignition System}
+The LDR sensor is used to detect the presence of a key (represented by a finger) based on its light sensitivity. When the LDR detects a low light level (below a certain threshold), it triggers the ignition of the system. The function \texttt{key\_check} reads the LDR value using ADC and returns \texttt{true} if a key is detected, signaling the car to power on and activate the DIP switch system. This key check is continually monitored in the main loop.
+
+\subsubsection{DIP Switch Gear Control}
+The DIP switch system is implemented using three switches to select the car's current mode. The \texttt{get\_dip\_switch\_state} function checks the states of these switches and returns the selected mode (e.g., park, drive, reverse). The program uses the DIP switch inputs to control the car's motor direction and speed, with additional checks for brake and horn activation.
+
+\subsubsection{Motor Control}
+Motor control is achieved through the L293D motor driver. The motor's direction is set based on the selected DIP switch state, and its speed is adjusted using the potentiometer value. The motor speed is dynamically adjusted by reading the potentiometer through ADC and mapping the values to a PWM duty cycle. This functionality is controlled by the \texttt{get\_motor\_speed} function, which reads the potentiometer's value and adjusts the motor speed accordingly.
+
+\subsubsection{Directional Lights and Indicator Task}
+To handle the indicator lights, a dedicated FreeRTOS task (\texttt{indicator\_light\_task}) continuously checks the DIP switch states for lights control. The lights are turned on or blink based on the active DIP switch setting. This task uses GPIOs to manage the LED behavior, providing visual feedback on the current car mode (e.g., park, drive, reverse).
+
+\subsubsection{Brake and Horn Buttons}
+The brake and horn buttons are configured with interrupts. When the brake button is pressed, the car stops, and the motor is deactivated. Similarly, when the horn button is pressed, the system activates the buzzer to simulate the horn sound. These actions are handled by the \texttt{handle\_brake} and \texttt{handle\_horn} functions. Button debouncing is handled using timestamps to avoid multiple triggers from a single press.
+
+\subsubsection{Hall Effect Sensor for RPM Measurement}
+The Hall effect sensor detects pulses generated by a rotating magnet, which is used to calculate the car's motor RPM. The sensor is configured with an interrupt handler (\texttt{hall\_sensor\_isr\_handler}) to count the pulses. A separate task (\texttt{calculate\_rpm\_task}) calculates the RPM by measuring the pulse frequency over a defined period. This value is updated periodically and displayed on the OLED screen.
+
+\subsubsection{OLED Display}
+The OLED display is used to show the car's status (e.g., mode, motor speed). The display is controlled using the I2C interface, with functions like \texttt{oled\_init}, \texttt{oled\_clear}, and \texttt{oled\_write\_text} managing communication with the screen. The car's current state is displayed in real-time on the OLED screen, providing users with visual feedback on the car's operation.
+
+\subsubsection{System Integration and Flow}
+The system is integrated in a modular way, with each function responsible for a specific hardware component. The main program flow handles the logic of checking the key presence, reading the DIP switch state, controlling the motor and lights, and processing button presses and RPM calculations. The system is built step by step, starting from basic key detection, progressing through motor and light controls, and ending with the full system functionality being displayed on the OLED screen.
+
+\subsection{Hardware Setup}
+The hardware setup for this project involved using a variety of components to control the toy car's functionalities. All the components were connected on three breadboards, allowing for a clean and modular arrangement. The wiring was done with a combination of standard jumper wires and stripped wires for a more organized and aesthetically pleasing layout. This approach reduced the overall mess of wires while maintaining flexibility for testing and modifications.
+
+\subsubsection{Custom Wiring for Cleanliness}
+To make the wiring cleaner and more manageable, I used stripped wires for most of the connections. I had never used stripped wires before, but I found them to be very useful for creating custom lengths and keeping the wiring neat.
+
+\newpage

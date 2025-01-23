@@ -93,7 +93,8 @@ volatile bool is_motor_active = false;
 volatile uint32_t last_brake_press_time = 0;
 volatile uint32_t last_horn_press_time = 0;
 
-volatile double current_rpm = 0.0;  // Global variable to store current RPM
+// RIP global variable
+volatile double current_rpm = 0.0; 
 
 
 // Function Prototypes

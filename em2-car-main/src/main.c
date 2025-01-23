@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "driver/gpio.h"
@@ -7,6 +8,7 @@
 #include "esp_timer.h"
 #include "driver/i2c.h"
 #include "ssd1306.h"
+#include "ssd1306_fonts.h"
 
 // Pin Definitions
 
@@ -22,9 +24,26 @@
 #define DIP_SWITCH_9 GPIO_NUM_38
 #define DIP_SWITCH_10 GPIO_NUM_20
 
-//<--- Display --->//
+// I2C Definitions
 #define I2C_DISPLAY_NUM I2C_NUM_1
 #define I2C_DISPLAY_FREQ_HZ 100000
+#define I2C_DISPLAY_SDA_IO GPIO_NUM_8
+#define I2C_DISPLAY_SCL_IO GPIO_NUM_9 
+
+// OLED Display Definitions
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 32
+
+// LEDC Definitions
+typedef enum SCREEN_ALIGNMENT{
+  FREE,
+  CENTER,
+  RIGHT,
+  LEFT
+} SCREEN_ALIGNMENT;
+
+// OLED Display Handle
+static ssd1306_handle_t ssd1306_dev = NULL;
 
 // LED Definitions
 #define LED_1 GPIO_NUM_19
@@ -45,7 +64,7 @@
 #define BZR GPIO_NUM_17
 
 // LDR Threshhold Value
-#define THRESHOLD_VALUE 50
+#define THRESHOLD_VALUE 100
 
 // Motor Speed Definitions
 #define REVERSE_SPEED 800
@@ -55,7 +74,7 @@
 #define PULSE_COUNT_PERIOD_MS 1000
 
 // Button Debounce Delay
-#define DEBOUNCE_DELAY_MS 50
+#define DEBOUNCE_DELAY_MS 150
 
 // Global Variables
 
@@ -73,6 +92,8 @@ volatile bool is_motor_active = false;
 // Global variables for debouncing
 volatile uint32_t last_brake_press_time = 0;
 volatile uint32_t last_horn_press_time = 0;
+
+volatile double current_rpm = 0.0;  // Global variable to store current RPM
 
 
 // Function Prototypes
@@ -93,7 +114,9 @@ static void IRAM_ATTR hall_sensor_isr_handler(void* arg);
 void calculate_rpm_task(void* param);
 void configure_hall_sensor(void);
 void i2c_master_init(void);
-void oled_init(void);
+void init_display(void);
+void add_text_to_display(const char *text, int x, int y, SCREEN_ALIGNMENT alignment, bool clear);
+void clear_display(void);
 
 void app_main(void)
 {
@@ -150,6 +173,9 @@ void app_main(void)
     configure_hall_sensor();
     xTaskCreate(calculate_rpm_task, "Calculate RPM Task", 2048, NULL, 1, NULL);
 
+    // Initialize I2C and OLED display
+    init_display();
+
     // Main loop to check the key presence and DIP switch states
     while (1) {
 
@@ -164,8 +190,7 @@ void app_main(void)
 
         if (key_check()) {
             printf("Key detected. Checking DIP switch state...\n");
-            display_car_state("Key Detected");
-            
+
             int current_state = get_dip_switch_state();
             if (current_state != last_state) {
                 last_state = current_state;
@@ -173,7 +198,7 @@ void app_main(void)
 
                 if (current_state == 1) {
                     printf("Car is in park\n");
-                    display_car_state("Car is in Park");
+                    add_text_to_display("Car is parked", 0, 0, CENTER, true);
 
                     // Blink both LEDs for 10 cycles rapidly
                     for (int i = 0; i < 10; i++) {
@@ -186,6 +211,7 @@ void app_main(void)
                     }
                 } else if (current_state == 2) {
                     printf("Car is in drive\n");
+                    add_text_to_display("Car is driving", 0, 0, CENTER, true);
                     is_motor_active = true;
 
                     // Set motor direction (forwards) and speed based on DIP switch 2
@@ -195,6 +221,10 @@ void app_main(void)
                     // Dynamic motor speed control based on potentiometer value
                     while (current_state == 2) {
                         current_state = get_dip_switch_state();
+
+                        
+                        brake_pressed = false;
+                        horn_pressed = false;
 
                         if (brake_pressed) {
                             handle_brake();
@@ -208,14 +238,20 @@ void app_main(void)
 
                         int speed = get_motor_speed();
                         printf("Dynamic motor speed: %d\n", speed);
-                        display_car_state("Car is in Drive");
+
+                        // Display RPM on the OLED
+                        char rpm_text[32];
+                        snprintf(rpm_text, sizeof(rpm_text), "RPM: %.2f", current_rpm);
+                        add_text_to_display(rpm_text, 0, 16, LEFT, false);
+
                         ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, speed);
                         ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
                         vTaskDelay(pdMS_TO_TICKS(100));
                     }
                 } else if (current_state == 3) {
                     printf("Car is in reverse\n");
-                    display_car_state("Car is in Reverse");
+                    add_text_to_display("Car is driving in reverse", 0, 0, CENTER, true);
+
                     is_motor_active = true;
 
                     // Set motor direction (backwards) and speed based on DIP switch 3
@@ -227,7 +263,7 @@ void app_main(void)
                     ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
                 } else {
                     printf("Car is off\n");
-                    display_car_state("Car is Off");
+                    add_text_to_display("Car is off", 0, 0, CENTER, true);
                     is_motor_active = false;
 
                     // Turn off motor and LEDs when car is off
@@ -239,6 +275,7 @@ void app_main(void)
             }
         } else {
             printf("No key detected. Waiting...\n");
+            add_text_to_display("No key detected", 0, 0, CENTER, true);
         }
         vTaskDelay(pdMS_TO_TICKS(500));
     }
@@ -352,6 +389,7 @@ void indicator_light_task(void *param) {
         // Check DIP_SWITCH_10 and key presence
         if (gpio_get_level(DIP_SWITCH_9) == 0 && key_check()) {
             // Start blinking LED_3 until DIP_SWITCH_9 is turned off
+            add_text_to_display("Indicating left", 0, 0, CENTER, true);
             while (gpio_get_level(DIP_SWITCH_9) == 0 && key_check()) {
                 gpio_set_level(LED_3, 1);
                 vTaskDelay(pdMS_TO_TICKS(500));
@@ -364,6 +402,7 @@ void indicator_light_task(void *param) {
 
         // Check DIP_SWITCH_10 and key presence
         if (gpio_get_level(DIP_SWITCH_10) == 0  && key_check()) {
+            add_text_to_display("Indicating right", 0, 0, CENTER, true);
             // Start blinking LED_4 until DIP_SWITCH_10 is turned off
             while (gpio_get_level(DIP_SWITCH_10) == 0 && key_check()) {
                 gpio_set_level(LED_4, 1);
@@ -516,8 +555,10 @@ void calculate_rpm_task(void* param) {
 
             double time_seconds = (end_time - start_time) / 1e6;  // Convert time to seconds
             double rpm = (pulses / time_seconds) * 60;           // Calculate RPM
+            current_rpm = rpm;  // Update global variable
             printf("Motor Speed: %.2f RPM\n", rpm);
         } else {
+            current_rpm = 0.0;  // Set RPM to 0 if motor is inactive
             vTaskDelay(pdMS_TO_TICKS(500)); // Sleep to save CPU cycles if the motor is inactive
         }
     }
@@ -542,6 +583,11 @@ void configure_hall_sensor() {
     gpio_isr_handler_add(HALL_SENSOR_PIN, hall_sensor_isr_handler, NULL);
 }
 
+/**
+ * @brief Initialize the I2C master interface.
+ *
+ * This function initializes the I2C master interface for the OLED display.
+ */
 void init_display()
 {
     i2c_config_t conf;
@@ -556,9 +602,66 @@ void init_display()
     i2c_param_config(I2C_DISPLAY_NUM, &conf);
     i2c_driver_install(I2C_DISPLAY_NUM, conf.mode, 0, 0, 0);
 
+    // Initialize the SSD1306 display
     ssd1306_dev = ssd1306_create(I2C_DISPLAY_NUM, SSD1306_I2C_ADDRESS);
+    if (ssd1306_dev == NULL) {
+        printf("Failed to initialize SSD1306\n");
+        return;
+    }
+
     ssd1306_refresh_gram(ssd1306_dev);
     ssd1306_clear_screen(ssd1306_dev, 0x00);
 
+    // Add startup text to the display
     add_text_to_display("Startup...", 0, 0, CENTER, true);
+}
+
+
+/**
+ * @brief Add text to the OLED display.
+ *
+ * This function adds text to the OLED display at the specified position and alignment.
+ *
+ * @param text The text to display.
+ * @param x The x-coordinate of the text.
+ * @param y The y-coordinate of the text.
+ * @param alignment The alignment of the text (FREE, CENTER, RIGHT, LEFT).
+ * @param clear Clear the screen before adding the text.
+ */
+void add_text_to_display(const char *text, int x, int y, SCREEN_ALIGNMENT alignment, bool clear)
+{
+    switch (alignment)
+    {
+    default:
+    case FREE:
+        break;
+    case CENTER:
+        // Calculate the x pos based on the length of the string and the width of chars
+        x = (SCREEN_WIDTH - strlen(text) * 8) / 2;
+        break;
+    case LEFT:
+        x = 0;
+        break;
+    case RIGHT:
+        x = (SCREEN_WIDTH - strlen(text) * 8);
+        break;
+    }
+
+    if (clear) {
+        clear_display();
+    }
+
+    ssd1306_draw_string(ssd1306_dev, x, y, (const uint8_t *)text, 16, 1);
+    ssd1306_refresh_gram(ssd1306_dev);
+}
+
+/**
+ * @brief Clear the OLED display.
+ *
+ * This function clears the OLED display by filling the screen with zeros.
+ */
+void clear_display()
+{
+    ssd1306_clear_screen(ssd1306_dev, 0x00);
+    ssd1306_refresh_gram(ssd1306_dev);
 }

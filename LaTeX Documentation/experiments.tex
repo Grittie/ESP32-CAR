@@ -10,9 +10,10 @@ This project was my first experience writing such an extensive program using the
 One of the most significant challenges I faced was working with interrupts. Interrupts were a fairly new concept to me in practice, and I had to ensure that each component was correctly handled through interrupt service routines (ISRs). These are critical for real-time response, especially for buttons and sensors, but understanding how to manage them effectively required careful study and implementation. Despite the steep learning curve, I now feel more comfortable with this aspect of embedded systems development.
 
 \subsubsection{OLED Display Challenges}
-The OLED display was another area where I encountered difficulties. I attempted to control the display without relying on an external library, which I thought would give me more flexibility. However, I struggled to get the display to function properly, as handling the low-level communication with the I2C interface and sending commands manually proved more complicated than expected. I wish I could've gotten this to work.
+Originally I had a LOT of issues with getting the OLED display to work, not finding or knowing a library to use it I tried to make it function without one. To no avail, however with help from classmates I was able to find a library that worked and I got the display to work well!
 
-\includegraphics[scale=0.05]{img/oled.jpg}
+\includegraphics[scale=0.25]{img/oled.png}
+\includegraphics[scale=0.25]{img/oled2.png}
 
 \subsubsection{Multithreading with FreeRTOS Tasks}
 Multithreading using tasks in FreeRTOS was another unfamiliar area for me. Managing multiple tasks concurrently, such as reading sensor values, controlling the motor, and handling button presses. Learning this concept was really helpful.

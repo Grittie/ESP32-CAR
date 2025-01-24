@@ -96,7 +96,6 @@ volatile uint32_t last_horn_press_time = 0;
 // RIP global variable
 volatile double current_rpm = 0.0; 
 
-
 // Function Prototypes
 bool key_check(void);
 int get_dip_switch_state(void);
@@ -616,7 +615,6 @@ void init_display()
     // Add startup text to the display
     add_text_to_display("Startup...", 0, 0, CENTER, true);
 }
-
 
 /**
  * @brief Add text to the OLED display.
